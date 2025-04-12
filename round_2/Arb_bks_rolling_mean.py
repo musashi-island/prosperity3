@@ -170,7 +170,6 @@ class Trader:
 
         # Empty trader data to flush logs
         traderData = ""
-        logger.flush(state, orders, 0, traderData)
-        conversions = 1
-        return orders, conversions, traderData
+        #logger.flush(state, orders, 0, traderData)
+        return orders, 0, traderData
 
