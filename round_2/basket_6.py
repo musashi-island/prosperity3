@@ -76,7 +76,7 @@ PARAMS = {
     Product.SPREAD: {
         "default_spread_mean": 48.76243,
         "default_spread_std": 76.07966,
-        "spread_std_window": 25,
+        "spread_std_window": 20,
         "target_position": 33,
         "adaptive_base": 5,
         "vol_factor": 0.35,
