@@ -4,7 +4,82 @@ import jsonpickle
 import numpy as np
 import json
 
+from typing import List, Dict, Tuple,Any
+import string
+import jsonpickle
+import numpy as np
+import math
+import json
+from typing import Dict, List, Tuple, Any
+from json import JSONEncoder
+import jsonpickle
+import statistics
+
+logger = None
+
+class Logger:
+    def __init__(self) -> None:
+        self.logs = ""
+        self.max_log_length = 3750
+
+    def print(self, *objects: Any, sep: str = " ", end: str = "\n") -> None:
+        self.logs += sep.join(map(str, objects)) + end
+
+    def flush(self, state: TradingState, orders: Dict[Symbol, List[Order]],
+              conversions: int, trader_data: str) -> None:
+        base_length = len(
+            self.to_json([
+                self.compress_state(state, ""),
+                self.compress_orders(orders),
+                conversions, "", "",
+            ])
+        )
+        max_item_length = (self.max_log_length - base_length) // 3
+        print(self.to_json([
+            self.compress_state(state, self.truncate(state.traderData, max_item_length)),
+            self.compress_orders(orders),
+            conversions,
+            self.truncate(trader_data, max_item_length),
+            self.truncate(self.logs, max_item_length),
+        ]))
+        self.logs = ""
+
+    def compress_state(self, state: TradingState, trader_data: str) -> list[Any]:
+        return [
+            state.timestamp,
+            trader_data,
+            [[l.symbol, l.product, l.denomination] for l in state.listings.values()],
+            {s: [od.buy_orders, od.sell_orders] for s, od in state.order_depths.items()},
+            [[t.symbol, t.price, t.quantity, t.buyer, t.seller, t.timestamp]
+             for trades in state.own_trades.values() for t in trades],
+            [[t.symbol, t.price, t.quantity, t.buyer, t.seller, t.timestamp]
+             for trades in state.market_trades.values() for t in trades],
+            state.position,
+            [
+                state.observations.plainValueObservations,
+                {p: [co.bidPrice, co.askPrice, co.transportFees, co.exportTariff,
+                     co.importTariff, co.sugarPrice, co.sunlightIndex]
+                 for p, co in state.observations.conversionObservations.items()}
+            ]
+        ]
+
+    def compress_orders(self, orders: Dict[Symbol, List[Order]]) -> list[List[Any]]:
+        return [[o.symbol, o.price, o.quantity] for orders_list in orders.values() for o in orders_list]
+
+    def to_json(self, value: Any) -> str:
+        return json.dumps(value, cls=ProsperityEncoder, separators=(",", ":"))
+
+    def truncate(self, value: str, max_length: int) -> str:
+        return value if len(value) <= max_length else value[: max_length - 3] + "..."
+
+logger = Logger()
+
 class Product:
+    CROISSANTS = "CROISSANTS"
+    JAMS = "JAMS"
+    DJEMBES = "DJEMBES"
+    PICNIC_BASKET1 = "PICNIC_BASKET1"
+    PICNIC_BASKET2 = "PICNIC_BASKET2"
     RAINFOREST_RESIN = "RAINFOREST_RESIN"
     KELP = "KELP"
     SQUID_INK = "SQUID_INK" 
@@ -27,18 +102,20 @@ PARAMS = {
         "default_edge": 1,
     },
     Product.SQUID_INK: {
-        "averaging_length" : 300,
+        "fair_value" : 2000,
+        "averaging_length" : 350,
         "trigger_price" : 10,
-        "take_width": 5,
-        "clear_width": 1,
-        "prevent_adverse": False,
-        "adverse_volume": 18,
-        "reversion_beta": -0.3,
-        "disregard_edge": 1,
-        "join_edge": 1,
-        "default_edge": 1,
-        "max_order_quantity": 40,
-        "volatility_threshold": 2.5
+        "take_width": 5, #5
+        "clear_width": 1, #1
+        "prevent_adverse": False, #False
+        "adverse_volume": 18, #16
+        "reversion_beta":-0.3, #-0.3
+        "disregard_edge": 1, #1
+        "join_edge": 1, #1
+        "default_edge": 1, #1
+        "max_order_quantity": 35,
+        "volatility_threshold": 3,
+        "z_trigger" : 3.75
     },
 }
 
@@ -219,53 +296,61 @@ class Trader:
             traderObject['squid_ink_min_spreads'] = []
         if 'squid_ink_max_spreads' not in traderObject:
             traderObject['squid_ink_max_spreads'] = []
-
+        
+        # Calculate current market maker mid price
         if len(order_depth.sell_orders) != 0 and len(order_depth.buy_orders) != 0:
             best_ask = min(order_depth.sell_orders.keys())
             best_bid = max(order_depth.buy_orders.keys())
             min_spread = best_ask - best_bid
-
+            
+            # Calculate max spread (widest spread in the book)
             max_ask = max(order_depth.sell_orders.keys())
             min_bid = min(order_depth.buy_orders.keys())
             max_spread = max_ask - min_bid
-
+            
+            # Filter for large orders (potential market makers)
             filtered_ask = [
                 price
                 for price in order_depth.sell_orders.keys()
-                if abs(order_depth.sell_orders[price]) >= self.params[Product.SQUID_INK]["adverse_volume"]
+                if abs(order_depth.sell_orders[price])
+                >= self.params[Product.SQUID_INK]["adverse_volume"]
             ]
             filtered_bid = [
                 price
                 for price in order_depth.buy_orders.keys()
-                if abs(order_depth.buy_orders[price]) >= self.params[Product.SQUID_INK]["adverse_volume"]
+                if abs(order_depth.buy_orders[price])
+                >= self.params[Product.SQUID_INK]["adverse_volume"]
             ]
             mm_ask = min(filtered_ask) if len(filtered_ask) > 0 else None
             mm_bid = max(filtered_bid) if len(filtered_bid) > 0 else None
-
             if mm_ask is None or mm_bid is None:
                 if traderObject.get("squid_ink_last_price", None) is None:
-                    mmmid_price = (best_ask + best_bid - 1) // 2
+                    mmmid_price = (best_ask + best_bid-1) // 2 
                 else:
                     mmmid_price = traderObject["squid_ink_last_price"]
             else:
-                mmmid_price = (mm_ask + mm_bid - 1) // 2
-
+                mmmid_price = (mm_ask + mm_bid-1) // 2
+            
+            # Store spreads
             traderObject['squid_ink_min_spreads'].append(min_spread)
             traderObject['squid_ink_max_spreads'].append(max_spread)
+            
+            # Keep only last 15 values
             if len(traderObject['squid_ink_min_spreads']) > 4:
                 traderObject['squid_ink_min_spreads'] = traderObject['squid_ink_min_spreads'][-4:]
             if len(traderObject['squid_ink_max_spreads']) > 4:
                 traderObject['squid_ink_max_spreads'] = traderObject['squid_ink_max_spreads'][-4:]
-
+            
+            # Store mm mid price
             traderObject['squid_ink_mm_midprices'].append(mmmid_price)
             if len(traderObject['squid_ink_mm_midprices']) > 4:
                 traderObject['squid_ink_mm_midprices'] = traderObject['squid_ink_mm_midprices'][-4:]
-
+            
+            # Calculate average spreads
             avg_min_spread = sum(traderObject['squid_ink_min_spreads']) / len(traderObject['squid_ink_min_spreads'])
             avg_max_spread = sum(traderObject['squid_ink_max_spreads']) / len(traderObject['squid_ink_max_spreads'])
             traderObject['avg_min_spread'] = avg_min_spread
             traderObject['avg_max_spread'] = avg_max_spread
-
             if len(traderObject['squid_ink_mm_midprices']) >= 3:
                 x = list(range(len(traderObject['squid_ink_mm_midprices'])))
                 y = traderObject['squid_ink_mm_midprices']
@@ -273,15 +358,22 @@ class Trader:
                 y_mean = sum(y) / len(y)
                 numerator = sum((x[i] - x_mean) * (y[i] - y_mean) for i in range(len(x)))
                 denominator = sum((x[i] - x_mean) ** 2 for i in range(len(x)))
-                slope = numerator / denominator if denominator != 0 else 0
-
+                
+                if denominator != 0:
+                    slope = numerator / denominator
+                else:
+                    slope = 0
+                
+                # Update normalization to allow for both positive and negative slopes
+                # Keep the sign of the slope, but normalize its magnitude
                 slope_sign = 1 if slope > 0 else -1
                 slope_magnitude = abs(slope)
+                # Scale magnitude to a reasonable range (0.02 to 0.3)
                 normalized_magnitude = min(0.3, max(0.02, 0.1 * (slope_magnitude / 100)))
+                # Apply the original sign to the normalized magnitude
                 norm_slope = slope_sign * normalized_magnitude
-
+                
                 traderObject['dynamic_reversion_beta'] = norm_slope
-
                 if traderObject.get("squid_ink_last_price", None) is not None:
                     last_price = traderObject["squid_ink_last_price"]
                     last_returns = (mmmid_price - last_price) / last_price if last_price > 0 else 0
@@ -297,7 +389,8 @@ class Trader:
                     fair = mmmid_price + (mmmid_price * pred_returns)
                 else:
                     fair = mmmid_price
-
+                    
+            # Store last price for next iteration
             traderObject["squid_ink_last_price"] = mmmid_price
             return fair
 
@@ -529,7 +622,10 @@ class Trader:
         soft_position_limit: int = 0,
         traderObject: dict = None,
     ) -> (List[Order], int, int):
-
+        """
+        For RAINFOREST_RESIN: new "market-making" approach from your updated code.
+        For KELP/SQUID_INK: original approach from your old code.
+        """
         if product == Product.RAINFOREST_RESIN:
             orders = []
             volume_limit = self.params[product]["volume_limit"]
@@ -575,10 +671,20 @@ class Trader:
         else:
             orders: List[Order] = []
 
-            # If SQUID_INK, do special checks
+            # For SQUID_INK, check max_spread condition and adjust bid/ask based on slope sign
             if product == Product.SQUID_INK and traderObject is not None:
+                # Get current max_spread and average max_spread
                 current_max_spread = traderObject.get('squid_ink_max_spreads', [])[-1] if traderObject.get('squid_ink_max_spreads', []) else 0
                 avg_max_spread = traderObject.get('avg_max_spread', 0)
+                
+                # Get current min_spread
+                current_min_spread = traderObject.get('squid_ink_min_spreads', [])[-1] if traderObject.get('squid_ink_min_spreads', []) else 0
+                
+                # Get slope sign
+                slope = traderObject.get('dynamic_reversion_beta', 0)
+                positive_slope = slope > 0
+                
+                # Skip market making if max_spread is too large compared to average
                 if current_max_spread > avg_max_spread + 2:
                     return [], buy_order_volume, sell_order_volume
 
@@ -611,13 +717,12 @@ class Trader:
                     bid = best_bid_below_fair + 1
 
             # SQUID_INK additional check
-            if (product == Product.SQUID_INK and traderObject is not None 
-                and best_bid_below_fair is not None 
-                and best_ask_above_fair is not None):
+            if product == Product.SQUID_INK and traderObject is not None and best_bid_below_fair is not None and best_ask_above_fair is not None:
                 current_min_spread = traderObject.get('squid_ink_min_spreads', [])[-1] if traderObject.get('squid_ink_min_spreads', []) else 0
                 slope = traderObject.get('dynamic_reversion_beta', 0)
+                
                 if current_min_spread >= 2:
-                    if slope > 0:
+                    if slope > 0:  # Positive slope
                         if abs(best_ask_above_fair - fair_value) <= join_edge:
                             ask = best_ask_above_fair
                         else:
@@ -626,17 +731,18 @@ class Trader:
                             bid = best_bid_below_fair
                         else:
                             bid = best_bid_below_fair + 1
-                    elif slope < 0:
+                    elif slope < 0:  # Negative slope
                         if abs(best_ask_above_fair - fair_value) <= join_edge:
                             ask = best_ask_above_fair
                         else:
-                            ask = best_ask_above_fair - 1
+                            ask = best_ask_above_fair -1
                         if abs(fair_value - best_bid_below_fair) <= join_edge:
                             bid = best_bid_below_fair
                         else:
-                            bid = best_bid_below_fair
+                            bid = best_bid_below_fair 
                 else:
                     return [], buy_order_volume, sell_order_volume
+
 
             if manage_position:
                 if position > soft_position_limit:
@@ -655,6 +761,109 @@ class Trader:
             )
             return orders, buy_order_volume, sell_order_volume
 
+    def squid_ink_orders(self, order_depth: OrderDepth, traderObject, position: int) -> List[Order]:
+        orders: List[Order] = []
+        product = Product.SQUID_INK
+        params = PARAMS[product]
+        position_limit = self.LIMIT[product]
+
+        if not order_depth.sell_orders or not order_depth.buy_orders:
+            return orders
+
+        # --- Market Data ---
+        best_ask = min(order_depth.sell_orders)
+        best_bid = max(order_depth.buy_orders)
+        mid_price = (best_ask + best_bid) / 2
+        fair_value = params["fair_value"]
+
+        # --- Parameters ---
+        take_width = params["take_width"]
+        av_len = params["averaging_length"]
+        max_quantity = params["max_order_quantity"]
+        volatility_threshold = params["volatility_threshold"]
+        z_trigger = params["z_trigger"]
+        min_quantity = max(1, max_quantity // 4)
+
+        # --- Historical Tracking ---
+        if "squid_prices" not in traderObject:
+            traderObject["squid_prices"] = []
+
+        prices = traderObject["squid_prices"]
+        prices.append(mid_price)
+        if len(prices) > av_len:
+            prices.pop(0)
+        if len(prices) < av_len:
+            return orders
+        
+
+        # --- Volatility & Z-Score ---
+        mean_price = sum(prices) / len(prices)
+        variance = sum((p - mean_price) ** 2 for p in prices) / len(prices)
+        volatility = variance ** 0.5
+        zscore = (mid_price - mean_price) / volatility if volatility else 0
+
+        # --- Volume Estimation ---
+        bid_volume = abs(order_depth.buy_orders[best_bid])
+        ask_volume = abs(order_depth.sell_orders[best_ask])
+        avg_volume = (bid_volume + ask_volume) / 2
+        base_quantity = min(int(avg_volume), max_quantity)
+
+        # --- Adaptive Position Control ---
+        distance_from_anchor = abs(mid_price - fair_value)
+        anchor_proximity = max(0, 1 - (distance_from_anchor / 100))  # Closer to 1 near 2000
+        adjusted_limit = int(position_limit * anchor_proximity)
+        adjusted_limit = max(adjusted_limit, 10)  # Always allow small trades
+
+        # --- Helper: Clamped Order ---
+        def safe_order(price: float, qty: int):
+            new_position = position + sum(o.quantity for o in orders) + qty
+            if abs(new_position) > position_limit:
+                allowed_qty = position_limit - abs(position) if qty > 0 else -(position + sum(o.quantity for o in orders))
+                qty = max(min(qty, allowed_qty), -allowed_qty)
+            if qty != 0:
+                orders.append(Order(product, price, qty))
+
+        # --- Mean Reversion Trading ---
+        if  abs(zscore) >= z_trigger:
+            print("MEAN REVERSION")
+            scale = min(abs(zscore), 3)
+            dynamic_qty = max(min(int(scale * min(base_quantity, adjusted_limit)), max_quantity), min_quantity)
+            price_offset = round(take_width * scale)
+
+            if zscore > 0 and position > -adjusted_limit:
+                safe_order(best_bid - price_offset, -dynamic_qty)
+            elif zscore < 0 and position < adjusted_limit:
+                safe_order(best_ask + price_offset, dynamic_qty)
+
+        # --- Low-Volatility: Market Making Mode ---
+        else:
+            print("MARKETMAKING")
+            fv = self.squid_ink_fair_value(order_depth, traderObject)
+
+            take_orders, bvol, svol = self.take_orders(
+                product, order_depth, fv,
+                self.params[product]["take_width"], position,
+                self.params[product]["prevent_adverse"],
+                self.params[product]["adverse_volume"]
+            )
+            clear_orders, bvol, svol = self.clear_orders(
+                product, order_depth, fv,
+                self.params[product]["clear_width"], position,
+                bvol, svol
+            )
+            make_orders, _, _ = self.make_orders(
+                product, order_depth, fv, position, bvol, svol,
+                self.params[product]["disregard_edge"],
+                self.params[product]["join_edge"],
+                self.params[product]["default_edge"],
+                traderObject=traderObject
+            )
+            orders +=  take_orders + clear_orders + make_orders
+        return orders
+
+    ##########################################################################
+    # Finally, the run method: same overall structure, new RAINFOREST_RESIN logic
+    ##########################################################################
     def run(self, state: TradingState):
         traderObject = {}
         if state.traderData != None and state.traderData != "":
@@ -744,13 +953,19 @@ class Trader:
             )
             result[Product.KELP] = kelp_take_orders + kelp_clear_orders + kelp_make_orders
 
+
         # SQUID INK
 
         if Product.SQUID_INK in self.params and Product.SQUID_INK in state.order_depths:
-            squid_position = state.position.get(Product.SQUID_INK, 0)
-            orders_squid = self.sma(state.order_depths[Product.SQUID_INK], traderObject, squid_position)
-            result[Product.SQUID_INK] = orders_squid
+        # SQUID INK
+            squid_position = (
+                    state.position[Product.SQUID_INK]
+                    if Product.SQUID_INK in state.position
+                    else 0
+                )
+            result[Product.SQUID_INK] = self.squid_ink_orders(state.order_depths[Product.SQUID_INK], traderObject, squid_position)
 
         traderData = jsonpickle.encode(traderObject)
         conversions = 1  # same as your original
+        logger.flush(state, result, conversions, traderData)
         return result, conversions, traderData
