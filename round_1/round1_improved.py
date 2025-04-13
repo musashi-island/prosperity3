@@ -17,12 +17,12 @@ PARAMS = {
         "volume_limit": 0
     },
     Product.KELP: {
-        "take_width": 2,            # 1
+        "take_width": 1.5,            # 1         # 2
         "clear_width": 0,
         "prevent_adverse": True,
-        "adverse_volume": 20,       # 15
-        "reversion_beta": -0.25,    # -0.029
-        "disregard_edge": 2,        # 1
+        "adverse_volume": 15,       # 15        # 20
+        "reversion_beta": -0.229,   # -0.0229   # -0.25
+        "disregard_edge": 1,        # 1         # 2
         "join_edge": 0,
         "default_edge": 1,
     },
@@ -529,10 +529,7 @@ class Trader:
         soft_position_limit: int = 0,
         traderObject: dict = None,
     ) -> (List[Order], int, int):
-        """
-        For RAINFOREST_RESIN: new "market-making" approach from your updated code.
-        For KELP/SQUID_INK: original approach from your old code.
-        """
+
         if product == Product.RAINFOREST_RESIN:
             orders = []
             volume_limit = self.params[product]["volume_limit"]
@@ -658,9 +655,6 @@ class Trader:
             )
             return orders, buy_order_volume, sell_order_volume
 
-    ##########################################################################
-    # Finally, the run method: same overall structure, new RAINFOREST_RESIN logic
-    ##########################################################################
     def run(self, state: TradingState):
         traderObject = {}
         if state.traderData != None and state.traderData != "":
@@ -750,15 +744,12 @@ class Trader:
             )
             result[Product.KELP] = kelp_take_orders + kelp_clear_orders + kelp_make_orders
 
-        """
         # SQUID INK
 
         if Product.SQUID_INK in self.params and Product.SQUID_INK in state.order_depths:
             squid_position = state.position.get(Product.SQUID_INK, 0)
             orders_squid = self.sma(state.order_depths[Product.SQUID_INK], traderObject, squid_position)
             result[Product.SQUID_INK] = orders_squid
-
-        """
 
         traderData = jsonpickle.encode(traderObject)
         conversions = 1  # same as your original
