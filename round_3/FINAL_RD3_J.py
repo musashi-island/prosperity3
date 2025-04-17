@@ -1012,15 +1012,22 @@ class Trader:
         history = trader_object.setdefault("mid_history", {}).setdefault(product, [])
         history.append(mid_price)
 
-        # Limit rolling window to 50
-        if len(history) > 50:
-            history.pop(0)
-
-        mean = np.mean(history)
-        # Use fallback std = 1 if too few data points to avoid div-by-zero
-        std = np.std(history) if len(history) > 10 else 1
-        zscore = (mid_price - mean) / std
+        #if len(history) > 100:
+        #    history.pop(0)
+        #mean = np.mean(history)
+        #std = np.std(history) if len(history) > 10 else 1
+        #zscore = (mid_price - mean) / std
         
+        if len(history) > 100:
+            history.pop(0)
+        if len(history) > 40:
+            mean = np.mean(history)
+            std = np.std(history)
+            zscore = (mid_price - mean) / std if std > 0 else (mid_price - mean)
+        
+        if len(history) <= 40: zscore = 0
+
+
         if product == "VOLCANIC_ROCK":
             POSITION_LIMIT = 400  
             amount = 400
@@ -1215,7 +1222,7 @@ class Trader:
             self.spread_history.pop(0)
 
         # Calculate z-score based on historical spreads
-        if len(self.spread_history) >= 50:
+        if len(self.spread_history) >= 40:
             mean = statistics.mean(self.spread_history)
             #mean = 27.14675
             stdev = statistics.stdev(self.spread_history)
