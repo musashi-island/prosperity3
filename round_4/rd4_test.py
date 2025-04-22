@@ -81,18 +81,18 @@ class Trader:
     """Market‑maker that becomes trend‑follower when sunlight < CSI"""
 
     def __init__(self):
-        self.position_limit = 75          # exchange max position
-        self.base_size      = 10          # nominal quote size in MM mode
-        self.tick           = 1           # price granularity
+        self.position_limit = 75
+        self.base_size      = 10
+        self.tick           = 1
 
-        self.CSI            = 26.0        # default until enough history
-        self.csi_window     = 400         # timesteps kept in history
-        self.csi_quantile   = 0.15        # lower‑tail => critical level
+        self.CSI            = 45.0
+        self.csi_window     = 500
+        self.csi_quantile   = 0.15
         self.sun_hist       = deque(maxlen=self.csi_window)
 
-        self.regime         = "MM"        # "MM" or "TREND"
-        self.k_trend        = 2.5         # aggressiveness for target sizing
-        self.ask_premium    = 0.05        # +5 % premium when unloading
+        self.regime         = "MM"
+        self.k_trend        = 3
+        self.ask_premium    = 0.05
 
     def best_bid(self, od: OrderDepth):
         return (max(od.buy_orders), abs(od.buy_orders[max(od.buy_orders)])) \
