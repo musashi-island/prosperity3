@@ -1,5 +1,9 @@
 # 🏝️ Musashi's Island
 
+## IMC Prosperity 3 Algorithmic Trading Competition Submission
+
+### 29th out of 12,620 teams worlwide, 2nd in France
+
 > *"You must understand that there is more than one path to the top of the mountain."*  
 > — **Miyamoto Musashi**
 
