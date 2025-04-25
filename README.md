@@ -13,7 +13,7 @@ Musashi lived by principles of constant improvement, strategy without hesitation
 
 ---
 
-### 🛠️ Usage
+## 🛠️ Usage
 
 ```bash
 git clone git@gitlab.binets.fr:emeric.payer/musashi_island.git
@@ -107,9 +107,15 @@ code musashi_island
 
 ---
 
-> *"From one thing, know ten thousand things."*  
+## 📖 Results
+
+We finished 29th worldwide out of 12,620 teams, and 2nd in France.
 
 ![Result](result.png)
+
+---
+
+> *"From one thing, know ten thousand things."*  
 
 — With discipline and elegance,  
 Team MUSASHI
