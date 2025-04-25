@@ -1,6 +1,6 @@
 # 🏝️ Musashi's Island
 
-## IMC Prosperity 3 Algorithmic Trading Competition Submission
+## IMC Prosperity 3 Algorithmic Trading Competition
 
 ### 29th out of 12,620 teams worlwide, 2nd in France
 
