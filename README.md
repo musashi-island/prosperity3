@@ -22,5 +22,7 @@ code musashi_island
 
 > *From one thing, know ten thousand things."*  
 
+![Result](result.png)
+
 — With discipline and elegance,
 Team MUSASHI
