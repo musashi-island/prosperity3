@@ -24,7 +24,7 @@ code musashi_island
 
 ## 📖 Round Descriptions
 
-### 🥇 Round 1
+### 1️⃣ Round 1
 
 <details>
 <summary><b>Round 1 — New Products and Strategy Overview</b></summary>
@@ -41,7 +41,7 @@ code musashi_island
 
 </details>
 
-### 🥈 Round 2
+### 2️⃣ Round 2
 
 <details>
 <summary><b>Round 2 — Basket Strategies and Enhancements</b></summary>
@@ -60,7 +60,7 @@ code musashi_island
 
 </details>
 
-### 🥉 Round 3
+### 3️⃣ Round 3
 
 <details>
 <summary><b>Round 3 — Volatility Trading Introduction</b></summary>
@@ -76,7 +76,7 @@ code musashi_island
 
 </details>
 
-### 🏆 Round 4
+### 4️⃣ Round 4
 
 <details>
 <summary><b>Round 4 — Macaron Arbitrage</b></summary>
@@ -92,7 +92,7 @@ code musashi_island
 
 </details>
 
-### 🏅 Round 5
+### 5️⃣ Round 5
 
 <details>
 <summary><b>Round 5 — Final Integrated Strategy</b></summary>
@@ -107,7 +107,7 @@ code musashi_island
 
 ---
 
-## 📖 Results
+## 📈 Results
 
 We finished 29th worldwide out of 12,620 teams, and 2nd in France.
 
