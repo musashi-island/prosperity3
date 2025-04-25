@@ -13,6 +13,36 @@ Musashi lived by principles of constant improvement, strategy without hesitation
 
 ---
 
+## 📈 Results
+
+We finished 29th worldwide out of 12,620 teams, and 2nd in France.
+
+![Result](result.png)
+
+---
+
+## 👨‍👩‍👧‍👦 Our Team
+
+We are a group of five students from the Bachelor of Science program at École Polytechnique:
+
+- **Jules Frealle**  
+  [GitHub](https://github.com/julesFrealle) • [LinkedIn](https://www.linkedin.com/in/jules-frealle/)
+
+- **Emeric Payer**  
+  [GitHub](https://github.com/emeric7287) • [LinkedIn](https://www.linkedin.com/in/emeric-payer-754413265/)
+
+- **Youssef Nakhla**  
+  [GitHub](https://github.com/YoussefNakhla) • [LinkedIn](https://www.linkedin.com/in/youssef-nakhla-43963126b/)
+
+- **Mael Kupperschmitt**  
+  [GitHub](https://github.com/maelkupp) • [LinkedIn](https://www.linkedin.com/in/mael-kupperschmitt-84b40b294/)
+
+- **Iyad El Khoury**  
+  [GitHub](https://github.com/danido05)
+
+
+---
+
 ## 🛠️ Usage
 
 ```bash
@@ -104,14 +134,6 @@ code musashi_island
 - Implemented comprehensive, real-time risk management and advanced position-sizing algorithms across the entire product portfolio, achieving maximum responsiveness and profitability.
 
 </details>
-
----
-
-## 📈 Results
-
-We finished 29th worldwide out of 12,620 teams, and 2nd in France.
-
-![Result](result.png)
 
 ---
 
